@@ -1,11 +1,14 @@
 const server = require('venom-bot')
 const { db } = require('./db')
+const { WHATSAPP_CS_ID } = require('./config')
 
 // * Temporary
 const exDB = {
   greetings: `Halo Selamat Sore. Saya asisten pelayanan pelanggan di 2AMCoffee.\n\nKetik *Menu* untuk melihat daftar Menu, ketik *CS* untuk berbicara langsung dengan Admin`,
   menu: `Ini daftar menu dari kami:\n1. Apalah\n2.Itulah\n3. Bagaimana\n\nKetik *Order*`,
-  orderFormat: `*ORDER*\nNama: <nama kamu>\nAlamat: <alamat kamu>\nPayment: <TRANSFER / COD>`
+  orderFormat: `*ORDER*\nNama: <nama kamu>\nAlamat: <alamat kamu>\nPayment: <TRANSFER / COD>`,
+  cs: `Kamu sedang berbicara dengan CS, untuk kembali melanjutkan order Ketik *CSX*`,
+  leavingCS: `Terima kasih atas waktunya, semoga harimu menyenangkan!`
 }
 
 async function main() {
@@ -15,14 +18,15 @@ async function main() {
   setInterval(() => {
     userTempData = {}
     console.log('alive');
-  }, 180000)
+  }, 360000)
 
-  bot.onMessage(async ({ sender: { id: senderId }, body: message , timestamp, isGroupMsg }) => {
+  bot.onMessage(async (body) => {
+    const { from: senderId, body: message , timestamp, isGroupMsg, quotedMsgObj } = body
+
     // * [message = "Hello World"], [sender = { id: '6281318356925@c.us' }], [timestamp = 1615438700], [isGroupMsg = false]
 
     const setUserStep = (step) => userTempData[senderId]['step'] = step
-
-    console.log('Siapa saja yg order?', userTempData)
+    const setUserCS = (set = true) => userTempData[senderId]['chatWithCS'] = set
 
     if (!isGroupMsg) {
       const userMessage = message.toLowerCase()
@@ -33,6 +37,13 @@ async function main() {
         userTempData[senderId] = {}
         setUserStep(0)
         await bot.sendText(senderId, exDB.greetings)
+      } else if (userTempData[senderId]['chatWithCS']) {
+        if (userMessage === 'csx') {
+          setUserCS(false)
+          await bot.sendText(senderId, exDB.leavingCS)
+        } else {
+          await bot.sendText(WHATSAPP_CS_ID, `*Dari*: wa.me/${senderId.split('@')[0]}\n*Pesan*:\n${message}`)
+        }
       } else if (userTempData[senderId]['step'] === 0) {
         if (userMessage === 'menu') {
           setUserStep(1)
@@ -41,6 +52,9 @@ async function main() {
             content: exDB.menu
           }
           await bot.sendText(payload.senderId, payload.content)
+        } else if (userMessage === 'cs') {
+          setUserCS()
+          await bot.sendText(senderId, exDB.cs)
         } else {
           await bot.sendText(senderId, exDB.greetings)
         }
@@ -110,6 +124,16 @@ async function main() {
           }
           await bot.sendText(payload.senderId, payload.content)
         }
+      }
+    } else if (senderId === WHATSAPP_CS_ID) {
+      if (quotedMsgObj.body.split(':')[1]) {
+        await bot.sendText(`${quotedMsgObj.body.split(':')[1].split('\n')[0].split('/')[1]}@c.us`, message)
+      } else if (message === '/history') { // * Check History
+        await bot.sendText(WHATSAPP_CS_ID, 'History Orders')
+      } else if (message === '/pending') {
+        await bot.sendText(WHATSAPP_CS_ID, '')
+      } else {
+        // await bot.sendText(WHATSAPP_CS_ID)
       }
     }
   })
