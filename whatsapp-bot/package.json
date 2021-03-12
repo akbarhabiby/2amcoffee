@@ -1,0 +1,21 @@
+{
+  "name": "2amcoffee-whatsapp-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp bot for 2amcoffee business",
+  "main": "index.js",
+  "repository": "git@github.com:akbarhabiby/2amcoffee.git",
+  "author": "Muhammad Akbar Habiby Khalid",
+  "license": "MIT",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "npx nodemon index.js dev"
+  },
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "mongoose": "^5.11.19",
+    "venom-bot": "^3.0.9"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.7"
+  }
+}
