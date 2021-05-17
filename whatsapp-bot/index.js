@@ -1,5 +1,5 @@
 const server = require('venom-bot')
-const { db } = require('./db')
+const { db, model: { Menu } } = require('./db')
 const { WHATSAPP_CS_ID } = require('./config')
 
 // * Temporary
@@ -22,16 +22,20 @@ async function main() {
 
   bot.onMessage(async (body) => {
     const { from: senderId, body: message , timestamp, isGroupMsg, quotedMsgObj } = body
-
+    
+    const userMessage = message.toLowerCase()
     // * [message = "Hello World"], [sender = { id: '6281318356925@c.us' }], [timestamp = 1615438700], [isGroupMsg = false]
 
     const setUserStep = (step) => userTempData[senderId]['step'] = step
     const setUserCS = (set = true) => userTempData[senderId]['chatWithCS'] = set
+    const setUserData = (objUserData) => userTempData[senderId]['userData'] = objUserData
 
     if (!isGroupMsg) {
-      const userMessage = message.toLowerCase()
       const [date, fullTime] = new Date(timestamp * 1000).toLocaleString('id-ID').split(' ') // * [Date = "11/3/2021"], [fullTime = "11/3/2021 12.16.23"] (string)
       const [hour, minute, second] = fullTime.split('.') // * [hour = "12"], [minute = "45"], [second = "18"] (string)
+
+      // * ON DEV MSG
+      await bot.sendText(senderId, '*WhatsApp BOT Development on Progress*')
 
       if (!userTempData[senderId]) { // * First Chat (no step)
         userTempData[senderId] = {}
@@ -76,23 +80,28 @@ async function main() {
           let singleUserInputMessage = ''
   
           message.split('\n').forEach((element, index) => {
+            console.log(element);
             if (index > 0 && element) {
               if(element == '==') {
                 const [inputFormat, userInput] = singleUserInputMessage.split(':')
                 const inputFormatKey = inputFormat.toLowerCase().substring(1)
-                if (!userData[inputFormatKey]) userData[inputFormatKey] = userInput.substring(1)
+                if (!userData[inputFormatKey]) userData[inputFormatKey] = userInput[0] == ' ' ? userInput.substring(1) : userInput
                 singleUserInputMessage = ''
               } else {
                 singleUserInputMessage += ` ${element}`
               }
             }
           })
+
+
+          setUserData(userData)
+          console.log(userData);
   
           const [ buyerName ] = userData.nama.toLowerCase().split(' ')
   
           const payload = {
             senderId,
-            content: `Halo kak *${buyerName[0].toUpperCase() + buyerName.substring(1)}*!\n\nAlamat kakak di ${userData.alamat}\n\nApakah sudah benar?`
+            content: `Halo kak *${buyerName[0].toUpperCase() + buyerName.substring(1)}*!\n\nAlamat kakak di ${userData.alamat}\n\nApakah sudah benar?\n*BENAR* atau *SALAH*`
           }
   
           await bot.sendText(payload.senderId, payload.content)
@@ -120,20 +129,58 @@ async function main() {
         } else {
           const payload = {
             senderId,
-            content: 'Oopsss... Input kamu salah, berikut adalah input yang valid'
+            content: 'Oopsss... Input kamu salah, input yang valid adalah *BENAR*\natau\n*SALAH*'
           }
           await bot.sendText(payload.senderId, payload.content)
         }
       }
+    // * CUSTOMER SERVICE
     } else if (senderId === WHATSAPP_CS_ID) {
-      if (quotedMsgObj.body.split(':')[1]) {
+      if (quotedMsgObj?.body.split(':')[1]) {
         await bot.sendText(`${quotedMsgObj.body.split(':')[1].split('\n')[0].split('/')[1]}@c.us`, message)
+      } else if (message === '/menu') {
+        const menus = await Menu.find()
+        if (!menus.length) {
+          await bot.sendText(WHATSAPP_CS_ID, '*Oopsss..* Your menus is empty')
+        } else {
+          let result = '*Menus*\n'
+          menus.forEach(menu => {
+            console.log(menu)
+          })
+        }
+        
+        // ! DEVELOPMENT
+        console.log(menus, 'List menus')
+      } else if (message.split('\n')[0] === '/menu:add') {
+        const menuData = {}
+
+        message.split('\n').forEach((element, index) => {
+          if (index > 0 && element) {
+            const [inputFormat, userInput] = element.split(':')
+            if (userInput) {
+              menuData[inputFormat] = userInput.substring(1)
+            }
+          }
+        })
+
+        const { name, code, price } = menuData
+        if (name && code && price) {
+          await new Menu(menuData).save()
+          await bot.sendText(WHATSAPP_CS_ID, )
+        } else {
+          await bot.sendText(WHATSAPP_CS_ID, 'Cannot save to database, please check your input!')
+        }
+
+        console.log(menuData);
       } else if (message === '/history') { // * Check History
-        await bot.sendText(WHATSAPP_CS_ID, 'History Orders')
+        await bot.sendText(WHATSAPP_CS_ID, 'Today History Orders')
       } else if (message === '/pending') {
-        await bot.sendText(WHATSAPP_CS_ID, '')
+        await bot.sendText(WHATSAPP_CS_ID, 'Today Pending Orders')
+      } else if (message === '/message') {
+
       } else {
-        // await bot.sendText(WHATSAPP_CS_ID)
+        console.log(message);
+        await bot.sendText(WHATSAPP_CS_ID, `*Command not found!*\nHere is a list of commands:\n\n/menu\nhistory\n/pending`)
       }
     }
   })

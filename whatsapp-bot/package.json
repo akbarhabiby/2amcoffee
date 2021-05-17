@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "dotenv": "^8.2.0",
-    "mongoose": "^5.11.19",
+    "mongoose": "^5.12.1",
     "venom-bot": "^3.0.9"
   },
   "devDependencies": {

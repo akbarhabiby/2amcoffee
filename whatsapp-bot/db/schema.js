@@ -1,16 +1,33 @@
-const { mongoose: { Schema } } = require('./index')
+const { Schema } = require('mongoose')
 
 const menuSchema = new Schema({
-  name: String
-})
+  name: {
+    type: String
+  },
+  code: {
+    type: String
+  },
+  price: {
+    type: Number
+  }
+}, { timestamps: true })
 
 const transactionSchema = new Schema({
-  buyerName: String,
-  whatsappNumber: String,
-  address: String,
-  item: String,
-  paymentMethod: String
-})
+  name: {
+    type: String
+  },
+  address: {
+    type: String
+  },
+  product: [
+    {
+      type: Schema.Types.ObjectId, ref: 'Menu'
+    }
+  ],
+  payment: {
+    type: String
+  }
+}, { timestamps: true })
 
 module.exports = {
   menuSchema,
